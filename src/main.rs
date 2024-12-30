@@ -1,12 +1,9 @@
-use std::hash::Hasher;
-use std::io::{self, BufReader, Read, Write};
-use std::{collections::HashMap, env, path::PathBuf};
-use std::fs::{create_dir_all, File};
-use serde_json;
+use std::io::{self};
+use std::{env, path::PathBuf};
+use std::fs::create_dir_all;
 
 mod file_organizer;
 
-use chrono::{DateTime, Utc};
 
 
 use crate::file_organizer::get_list_of_files;
