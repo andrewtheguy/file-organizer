@@ -57,15 +57,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         } else if file.path.is_dir() {
             return Err(format!("Directories are not supported for {}", file.path.display()).into());
         }
+        let (_, new_file) = file_organizer::get_new_pair_path(&path,&file)?;
+        if new_file.exists() {
+            return Err(format!("The file {:?} already exists in the destination", new_file).into());
+        }
     }
     for file in &list_files {
-        let datetime = file.created;
-        let new_dir = path.join("organized")
-            .join(datetime.format("%Y").to_string())
-            .join(datetime.format("%m").to_string())
-            .join(datetime.format("%d").to_string());
+        let (new_dir, new_file) = file_organizer::get_new_pair_path(&path,&file)?;
         create_dir_all(&new_dir)?;
-        let new_file = new_dir.join(file.path.file_name().unwrap());
         println!("Moving {:?} to {:?}", file.path, new_file);
         // need to be the same filesystem otherwise might alter timestamps
         std::fs::rename(&file.path, &new_file)?;

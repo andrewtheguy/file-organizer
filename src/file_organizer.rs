@@ -16,38 +16,42 @@ pub struct FileEntry {
     pub file_size: u64,
 }
 
-pub fn get_list_of_files(path: &PathBuf)-> Result<Vec<FileEntry>, Box<dyn std::error::Error>> {
+pub fn get_list_of_files(orig_path: &PathBuf)-> Result<Vec<FileEntry>, Box<dyn std::error::Error>> {
 
-    if !path.is_dir() {
+    if !orig_path.is_dir() {
         return Err("The path provided is not a directory".into());
     }
 
     let mut file_list: Vec<FileEntry> = Vec::new();
 
-    for entry in WalkDir::new(path)
+    for entry in WalkDir::new(orig_path)
         .max_depth(1) // no subdirectories
         .follow_links(false) {
         let entry = entry?;
-        let path = entry.path();
-        if path.is_symlink() {
+        //let path = entry.path();
+        if entry.path().is_symlink() {
             // maybe skip instead in the future
             return Err(format!("Symlinks are not supported for {}",entry.path().display()).into());
         }
-        if let Ok(relative_path) = entry.path().strip_prefix(path) {
+        //println!("entry: {:?}", entry.path());
+        if let Ok(relative_path) = entry.path().strip_prefix(orig_path) {
             if let Some(first_component) = relative_path.components().next() {
                 if first_component.as_os_str() == "organized" {
                     println!("Entry {:?} has 'organized' as the first subfolder, skipping", entry.path());
                     continue;
                 }
-            } else if relative_path.components().any(|c| c.as_os_str() == ".DS_Store") {
+            } 
+            if relative_path.components().any(|c| c.as_os_str() == ".DS_Store") {
                 println!("Entry {:?} has '.DS_Store' in the path, skipping", entry.path());
                 continue;
             }
+        }else{
+            return Err("Error stripping prefix".into());
         }
-        if path.is_file() {
+        if entry.path().is_file() {
             //println!("{}", entry.path().display());
             
-            let metadata = fs::metadata(path)?;
+            let metadata = fs::metadata(entry.path())?;
 
             if let Ok(time) = metadata.created() {
                 //println!("{time:?}");
@@ -128,4 +132,14 @@ pub fn backup_orig_file_location(orig_path: &PathBuf,list_files: &[FileEntry]) -
         backup_file_json.write_all(serde_json::to_string_pretty(&orig_files)?.as_bytes())?;    
     }
     Ok(())
+}
+
+pub fn get_new_pair_path(orig_path: &PathBuf, file: &FileEntry) -> Result<(PathBuf,PathBuf), Box<dyn std::error::Error>> {
+    let datetime = file.created;
+    let new_dir = orig_path.join("organized")
+        .join(datetime.format("%Y").to_string())
+        .join(datetime.format("%m").to_string())
+        .join(datetime.format("%d").to_string());
+    let new_file = new_dir.join(file.path.file_name().unwrap());
+    Ok((new_dir,new_file))
 }
