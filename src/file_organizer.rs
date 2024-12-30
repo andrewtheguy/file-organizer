@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::{fs, path::PathBuf};
 
 use walkdir::WalkDir;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local, Utc};
 use std::hash::Hasher;
 use std::io::{self, BufReader, Read, Write};
 use std::fs::{create_dir_all, File};
@@ -135,10 +135,11 @@ pub fn backup_orig_file_location(orig_path: &PathBuf,list_files: &[FileEntry]) -
 
 pub fn get_new_pair_path(orig_path: &PathBuf, file: &FileEntry) -> Result<(PathBuf,PathBuf), Box<dyn std::error::Error>> {
     let datetime = file.created;
+    let local_datetime: DateTime<Local> = DateTime::from(datetime);
     let new_dir = orig_path.join("organized")
-        .join(datetime.format("%Y").to_string())
-        .join(datetime.format("%m").to_string())
-        .join(datetime.format("%d").to_string());
+        .join(local_datetime.format("%Y").to_string())
+        .join(local_datetime.format("%m").to_string())
+        .join(local_datetime.format("%d").to_string());
     let new_file = new_dir.join(file.path.file_name().unwrap());
     Ok((new_dir,new_file))
 }

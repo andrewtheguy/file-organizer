@@ -14,7 +14,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let path = PathBuf::from(env::args().nth(1).unwrap());
 
     if !path.is_dir() {
-        return Err("The path provided is not a directory".into());
+        return Err(format!("The path {:?} provided is not a directory",path).into());
     }
 
     let mut list_files = get_list_of_files(&path)?;
@@ -30,6 +30,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Calculate the slice end index
     let num_preview_files = std::cmp::min(list_files.len(), max_preview_files);
 
+    println!("Total number of files: {}", list_files.len());
     println!("First {} files:",num_preview_files);
 
     for file in &list_files[..num_preview_files] {
