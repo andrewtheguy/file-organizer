@@ -6,6 +6,8 @@ mod file_organizer;
 
 
 
+use chrono::{DateTime, Local};
+
 use crate::file_organizer::get_list_of_files;
 
 
@@ -34,7 +36,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("First {} files:",num_preview_files);
 
     for file in &list_files[..num_preview_files] {
-        println!("{:?} created at {}", file.path, file.created);
+        let local_datetime: DateTime<Local> = DateTime::from(file.created);
+        println!("{:?} created at {}", file.path, local_datetime);
     }
 
     if list_files.len() > num_preview_files {
