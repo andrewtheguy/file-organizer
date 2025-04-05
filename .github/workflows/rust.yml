@@ -24,6 +24,23 @@ jobs:
             path: target/release/file-organizer
 
 
+  build-linux-arm64:
+    runs-on: ubuntu-latest-arm
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: cargo build --release
+
+      # Upload build artifacts (for example, `dist/` directory)
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-arm64
+          path: target/release/file-organizer
+
+
+
   build-macos:
     runs-on: macos-latest
 
