@@ -5,24 +5,47 @@ use std::fs::create_dir_all;
 mod file_organizer;
 
 use chrono::{DateTime, Local};
-use clap::Parser;
+use clap::{Parser, Subcommand};
 
 use crate::file_organizer::get_list_of_files;
 
-/// Organize files in a directory by creation date
+/// File organization utility
 #[derive(Parser)]
 #[command(name = "file-organizer")]
-#[command(about = "Organizes files into subdirectories based on creation date", long_about = None)]
+#[command(about = "A tool for organizing and managing files", long_about = None)]
 struct Cli {
-    /// Path to the directory to organize
-    #[arg(value_name = "PATH")]
-    path: PathBuf,
+    #[command(subcommand)]
+    action: Action,
+}
+
+#[derive(Subcommand)]
+enum Action {
+    /// Organize files into subdirectories based on creation date
+    OrganizeByCreationDate {
+        /// Path to the directory to organize
+        #[arg(value_name = "PATH")]
+        path: PathBuf,
+    },
+    /// Separate potential live photo videos from images
+    SeparateLivePhotoVideos {
+        /// Path to the directory to process
+        #[arg(value_name = "PATH")]
+        path: PathBuf,
+    },
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
-    let path = cli.path;
+    match cli.action {
+        Action::OrganizeByCreationDate { path } => organize_by_creation_date(path),
+        Action::SeparateLivePhotoVideos { path: _ } => {
+            Err("Separate live photo videos functionality is not yet implemented yet".into())
+        }
+    }
+}
+
+fn organize_by_creation_date(path: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
 
     if !path.is_dir() {
         return Err(format!("The path {:?} provided is not a directory",path).into());
