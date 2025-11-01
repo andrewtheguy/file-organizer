@@ -1,19 +1,28 @@
 use std::io::{self};
-use std::{env, path::PathBuf};
+use std::path::PathBuf;
 use std::fs::create_dir_all;
 
 mod file_organizer;
 
-
-
 use chrono::{DateTime, Local};
+use clap::Parser;
 
 use crate::file_organizer::get_list_of_files;
 
+/// Organize files in a directory by creation date
+#[derive(Parser)]
+#[command(name = "file-organizer")]
+#[command(about = "Organizes files into subdirectories based on creation date", long_about = None)]
+struct Cli {
+    /// Path to the directory to organize
+    #[arg(value_name = "PATH")]
+    path: PathBuf,
+}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let cli = Cli::parse();
 
-    let path = PathBuf::from(env::args().nth(1).unwrap());
+    let path = cli.path;
 
     if !path.is_dir() {
         return Err(format!("The path {:?} provided is not a directory",path).into());
