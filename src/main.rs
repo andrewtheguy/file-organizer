@@ -7,7 +7,7 @@ mod file_organizer;
 use chrono::{DateTime, Local};
 use clap::{Parser, Subcommand};
 
-use crate::file_organizer::get_list_of_files;
+use crate::file_organizer::{get_list_of_files, get_live_photo_candidates};
 
 /// File organization utility
 #[derive(Parser)]
@@ -39,9 +39,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match cli.action {
         Action::OrganizeByCreationDate { path } => organize_by_creation_date(path),
-        Action::SeparateLivePhotoVideos { path: _ } => {
-            Err("Separate live photo videos functionality is not yet implemented yet".into())
-        }
+        Action::SeparateLivePhotoVideos { path } => separate_live_photo_videos(path),
     }
 }
 
@@ -101,6 +99,71 @@ fn organize_by_creation_date(path: PathBuf) -> Result<(), Box<dyn std::error::Er
         println!("Moving {:?} to {:?}", file.path, new_file);
         // need to be the same filesystem otherwise might alter timestamps
         std::fs::rename(&file.path, &new_file)?;
+    }
+
+    Ok(())
+}
+
+fn separate_live_photo_videos(path: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+    if !path.is_dir() {
+        return Err(format!("The path {:?} provided is not a directory", path).into());
+    }
+
+    let mut candidates = get_live_photo_candidates(&path)?;
+
+    if candidates.is_empty() {
+        return Err("No potential live photo videos found".into());
+    }
+
+    candidates.sort();
+
+    let max_preview_files = 10;
+    let num_preview_files = std::cmp::min(candidates.len(), max_preview_files);
+
+    println!("Total number of potential live photo videos: {}", candidates.len());
+    println!("First {} files:", num_preview_files);
+
+    for file_path in &candidates[..num_preview_files] {
+        println!("{:?}", file_path);
+    }
+
+    if candidates.len() > num_preview_files {
+        println!("...");
+    }
+
+    println!("enter y to continue, anything else to exit");
+
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+    if input.trim() != "y" {
+        return Ok(());
+    }
+
+    // Create destination directory
+    let dest_dir = path.join("potential_live_photo_videos");
+
+    // Validate no destination conflicts exist
+    for file_path in &candidates {
+        if file_path.is_symlink() {
+            return Err(format!("Symlinks are not supported for {}", file_path.display()).into());
+        } else if file_path.is_dir() {
+            return Err(format!("Directories are not supported for {}", file_path.display()).into());
+        }
+
+        let dest_file = dest_dir.join(file_path.file_name().unwrap());
+        if dest_file.exists() {
+            return Err(format!("The file {:?} already exists in the destination", dest_file).into());
+        }
+    }
+
+    // Create the destination directory
+    create_dir_all(&dest_dir)?;
+
+    // Move files
+    for file_path in &candidates {
+        let dest_file = dest_dir.join(file_path.file_name().unwrap());
+        println!("Moving {:?} to {:?}", file_path, dest_file);
+        std::fs::rename(file_path, &dest_file)?;
     }
 
     Ok(())

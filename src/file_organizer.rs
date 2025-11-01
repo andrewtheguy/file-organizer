@@ -149,3 +149,52 @@ pub fn get_new_pair_path(orig_path: &PathBuf, file: &FileEntry) -> Result<(PathB
     let new_file = new_dir.join(file.path.file_name().unwrap());
     Ok((new_dir,new_file))
 }
+
+pub fn get_live_photo_candidates(orig_path: &PathBuf) -> Result<Vec<PathBuf>, Box<dyn std::error::Error>> {
+    if !orig_path.is_dir() {
+        return Err("The path provided is not a directory".into());
+    }
+
+    let mut candidates: Vec<PathBuf> = Vec::new();
+
+    for entry in WalkDir::new(orig_path)
+        .max_depth(1) // no subdirectories
+        .follow_links(false) {
+        let entry = entry?;
+
+        if entry.path().is_symlink() {
+            return Err(format!("Symlinks are not supported for {}", entry.path().display()).into());
+        }
+
+        // Skip potential_live_photo_videos and organized folders
+        if let Ok(relative_path) = entry.path().strip_prefix(orig_path) {
+            if let Some(first_component) = relative_path.components().next() {
+                if first_component.as_os_str() == "potential_live_photo_videos"
+                    || first_component.as_os_str() == "organized"
+                    || first_component.as_os_str() == ".DS_Store" {
+                    continue;
+                }
+            }
+        }
+
+        if entry.path().is_file() {
+            // Check if file has .MOV extension (uppercase only)
+            if let Some(extension) = entry.path().extension() {
+                if extension == "MOV" {
+                    // Check if corresponding .HEIC or .JPG file exists
+                    let file_stem = entry.path().file_stem().unwrap();
+                    let parent_dir = entry.path().parent().unwrap();
+
+                    let heic_path = parent_dir.join(format!("{}.HEIC", file_stem.to_string_lossy()));
+                    let jpg_path = parent_dir.join(format!("{}.JPG", file_stem.to_string_lossy()));
+
+                    if heic_path.exists() || jpg_path.exists() {
+                        candidates.push(entry.path().to_path_buf());
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(candidates)
+}
